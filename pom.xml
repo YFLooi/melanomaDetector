@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ /*
+  ~  * ******************************************************************************
+  ~  *  * Copyright (c) 2020 CertifAI Sdn. Bhd.
+  ~  *  *
+  ~  *  * This program and the accompanying materials are made available under the
+  ~  *  * terms of the Apache License, Version 2.0 which is available at
+  ~  *  * https://www.apache.org/licenses/LICENSE-2.0.
+  ~  *  *
+  ~  *  * Unless required by applicable law or agreed to in writing, software
+  ~  *  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~  *  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~  *  * License for the specific language governing permissions and limitations
+  ~  *  * under the License.
+  ~  *  *
+  ~  *  * SPDX-License-Identifier: Apache-2.0
+  ~  *  *****************************************************************************
+  ~  */
+  ~
+  -->
+
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>melanoma-detector</groupId>
+  <artifactId>global.skymind</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <name>Melanoma Detector</name>
+  <description>Find melanomas based on images</description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <java.version>1.8</java.version>
+    <dl4j.version>1.0.0-beta6</dl4j.version>
+    <nd4j.version>1.0.0-beta6</nd4j.version>
+    <!-- Change the nd4j.backend property to nd4j-cuda-*.*-platform example: nd4j-cuda-10.2-platform to use CUDA GPUs -->
+    <!-- For CPU, change the nd4j.backend property to nd4j-native-platform -->
+    <!-- For CPU with AVX change the nd4j.backend property to nd4j-native -->
+    <nd4j.backend>nd4j-cuda-10.2-platform</nd4j.backend>
+    <datavec.version>1.0.0-beta6</datavec.version>
+    <dl4j.cuda.backend>deeplearning4j-cuda-10.2</dl4j.cuda.backend>
+
+    <slf4j.version>2.0.0-alpha1</slf4j.version>
+    <javacv.version>1.5.2</javacv.version>
+    <zip4j.version>2.2.6</zip4j.version>
+
+    <maven-compiler-plugin.version>3.6.1</maven-compiler-plugin.version>
+    <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
+    <exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
+    <maven.minimum.version>3.3.1</maven.minimum.version>
+    <javafx.version>2.2.3</javafx.version>
+    <dl4j.cuda.backend>deeplearning4j-cuda-10.2</dl4j.cuda.backend>
+  </properties>
+
+  <dependencies>
+    <!-- ND4J backend. You need one in every DL4J project. Normally define artifactId as either "nd4j-native-platform" or "nd4j-cuda-9.2-platform" -->
+    <!-- Current setup uses AVX -->
+    <dependency>
+      <groupId>org.nd4j</groupId>
+      <artifactId>${nd4j.backend}</artifactId>
+      <version>${nd4j.version}</version>
+    </dependency>
+
+    <!--Comment out to disable AVX
+    <dependency>
+      <groupId>org.nd4j</groupId>
+      <artifactId>${nd4j.backend}</artifactId>
+      <version>${nd4j.version}</version>
+      <classifier>windows-x86_64-avx2</classifier>
+    </dependency>
+    -->
+
+    <!-- Altenatively, use GPU /CUDA for training -->
+    <!-- To use this, set ${nd4j.backend} = deeplearning4j-cuda-10.2 -->
+    <!-- Code below enables cudnn to work with CUDA when training using gpu -->
+    <dependency>
+      <groupId>org.deeplearning4j</groupId>
+      <artifactId>${dl4j.cuda.backend}</artifactId>
+      <version>${dl4j.version}</version>
+    </dependency>
+
+
+    <!-- deeplearning4j-core: contains main functionality and neural networks -->
+    <dependency>
+      <groupId>org.deeplearning4j</groupId>
+      <artifactId>deeplearning4j-core</artifactId>
+      <version>${dl4j.version}</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.deeplearning4j/deeplearning4j-nn -->
+    <dependency>
+      <groupId>org.deeplearning4j</groupId>
+      <artifactId>deeplearning4j-nn</artifactId>
+      <version>${dl4j.version}</version>
+    </dependency>
+
+    <!-- deeplearning4j-ui is used for visualization: see http://deeplearning4j.org/visualization -->
+    <dependency>
+      <groupId>org.deeplearning4j</groupId>
+      <artifactId>deeplearning4j-ui</artifactId>
+      <version>${dl4j.version}</version>
+    </dependency>
+
+    <!-- Next 2: used for MapFileConversion Example. Note you need *both* together -->
+    <dependency>
+      <groupId>org.datavec</groupId>
+      <artifactId>datavec-local</artifactId>
+      <version>${datavec.version}</version>
+    </dependency>
+
+    <!--For openCV-->
+    <dependency>
+      <groupId>org.bytedeco</groupId>
+      <!--May need to change to javacv-platform if error-->
+      <!--If changed to javacv-platform, ,ust use with classpath file command line shortener.
+      Go to Run > Edit config > videoObjectDetection > Shorten command line.
+      Set to classpathfile --> <!--original: javacv-->
+      <artifactId>javacv</artifactId>
+      <version>${javacv.version}</version>
+    </dependency>
+
+    <!--For YOLO model-->
+    <dependency>
+      <groupId>org.deeplearning4j</groupId>
+      <artifactId>deeplearning4j-zoo</artifactId>
+      <version>${dl4j.version}</version>
+    </dependency>
+
+
+    <!--Used for Unzipping files in some of the examples-->
+    <dependency>
+      <groupId>net.lingala.zip4j</groupId>
+      <artifactId>zip4j</artifactId>
+      <version>${zip4j.version}</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.github.davidmoten</groupId>
+      <artifactId>geo</artifactId>
+      <version>0.7.1</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <!-- Maven compiler plugin: compile for Java 8 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.5.1</version>
+        <configuration>
+          <source>${java.version}</source>
+          <target>${java.version}</target>
+        </configuration>
+      </plugin>
+
+
+      <!--
+      Maven shade plugin configuration:
+      To build uber jar (with all the dependencies)
+
+      Example way of doing in command line:
+      mvn clean package
+      cd target
+      java -cp my-first-dl4j-project.jar global.global.skymind.solution.convolution.mnist.MnistClassifier
+      -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>${maven-shade-plugin.version}</version>
+        <configuration>
+          <shadedArtifactAttached>true</shadedArtifactAttached>
+          <shadedClassifierName>bin</shadedClassifierName>
+          <createDependencyReducedPom>true</createDependencyReducedPom>
+          <filters>
+            <filter>
+              <artifact>*:*</artifact>
+              <excludes>
+                <exclude>org/datanucleus/**</exclude>
+                <exclude>META-INF/*.SF</exclude>
+                <exclude>META-INF/*.DSA</exclude>
+                <exclude>META-INF/*.RSA</exclude>
+              </excludes>
+            </filter>
+          </filters>
+        </configuration>
+
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                  <resource>reference.conf</resource>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
