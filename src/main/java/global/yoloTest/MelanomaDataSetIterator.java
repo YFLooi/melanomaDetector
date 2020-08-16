@@ -1,4 +1,4 @@
-package global.skymind;
+package global.testYolo;
 
 import org.bytedeco.opencv.opencv_core.Mat;
 import org.bytedeco.opencv.opencv_core.Point;

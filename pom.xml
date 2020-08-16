@@ -38,10 +38,14 @@
     <java.version>1.8</java.version>
     <dl4j.version>1.0.0-beta6</dl4j.version>
     <nd4j.version>1.0.0-beta6</nd4j.version>
-    <!-- Change the nd4j.backend property to nd4j-cuda-*.*-platform example: nd4j-cuda-10.2-platform to use CUDA GPUs -->
+
+    <!-- Change the nd4j.backend property to nd4j-cuda-*.*-platform example: nd4j-cuda-10.2-platform to use CUDA v10.2 with nVidia GPUs -->
     <!-- For CPU, change the nd4j.backend property to nd4j-native-platform -->
     <!-- For CPU with AVX change the nd4j.backend property to nd4j-native -->
-    <nd4j.backend>nd4j-cuda-10.2-platform</nd4j.backend>
+    <!-- CUDA error with this repo:
+    Exception in thread "main" java.lang.RuntimeException: Can't allocate [HOST] memory: 407703112; threadId: 1 -->
+    <nd4j.backend>nd4j-native</nd4j.backend>
+
     <datavec.version>1.0.0-beta6</datavec.version>
     <dl4j.cuda.backend>deeplearning4j-cuda-10.2</dl4j.cuda.backend>
 
@@ -58,32 +62,32 @@
   </properties>
 
   <dependencies>
-    <!-- ND4J backend. You need one in every DL4J project. Normally define artifactId as either "nd4j-native-platform" or "nd4j-cuda-9.2-platform" -->
-    <!-- Current setup uses AVX -->
+    <!-- ND4J backend. You need one in every DL4J project.
+    Normally define artifactId as either "nd4j-native-platform" or "nd4j-cuda-9.2-platform" -->
     <dependency>
       <groupId>org.nd4j</groupId>
       <artifactId>${nd4j.backend}</artifactId>
       <version>${nd4j.version}</version>
     </dependency>
 
-    <!--Comment out to disable AVX
+    <!--Comment out to disable AVX-->
     <dependency>
       <groupId>org.nd4j</groupId>
       <artifactId>${nd4j.backend}</artifactId>
       <version>${nd4j.version}</version>
       <classifier>windows-x86_64-avx2</classifier>
     </dependency>
-    -->
+
 
     <!-- Altenatively, use GPU /CUDA for training -->
     <!-- To use this, set ${nd4j.backend} = deeplearning4j-cuda-10.2 -->
-    <!-- Code below enables cudnn to work with CUDA when training using gpu -->
+    <!-- Code below enables cuDNN to work with CUDA when training using gpu
     <dependency>
       <groupId>org.deeplearning4j</groupId>
       <artifactId>${dl4j.cuda.backend}</artifactId>
       <version>${dl4j.version}</version>
     </dependency>
-
+    -->
 
     <!-- deeplearning4j-core: contains main functionality and neural networks -->
     <dependency>
