@@ -1,3 +1,9 @@
+/*
+**** Crashes when running on CUDA***
+* Error: Can't allocate [HOST] memory
+* Error: Exception in thread "main" java.lang.RuntimeException: cudaMalloc failed
+* Solution???
+* */
 package global.melanomaDetector;
 
 import org.bytedeco.javacv.CanvasFrame;
@@ -54,6 +60,7 @@ public class MelanomaDetector {
     private static final Logger log = LoggerFactory.getLogger(MelanomaDetector.class);
     private static int seed = 123;
     private static double detectionThreshold = 0.3;
+    //Set so that nBoxes*(5+nClasses) = odd number
     private static int nBoxes = 5; //refers to bounding boxes to generate at output layer??
     private static double lambdaNoObj = 0.5;
     private static double lambdaCoord = 5.0;
@@ -61,15 +68,18 @@ public class MelanomaDetector {
     private static double[][] priorBoxes = {{1, 3}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
 
     //***Set model run parameters***
-    private static int batchSize = 2; //Smallest batch is lentigoNOS
+    private static int batchSize = 10; //Smallest batch is lentigoNOS
     private static int nEpochs = 2;
     private static double learningRate = 1e-4;
     //5 types of labelled training data supplied, hence 5 possible outputs:
     //lentigo NOS, lichenoid keratosis, melanoma, nevus, and seborrheic keratosis
-    private static int nClasses = 6; //must be even??
+    //If this changes, adjust nOut of conv2d_23 at getComputationGraph()
+    //This ensures output CNN array dimensions matches that of input at conv2d_1
+    private static int nClasses = 5;
     private static List<String> labels;
 
     //***Set modelFilename and variable for ComputationGraph***
+    //Refers to C:\devBox\melanomaDetector\generated-models
     private static File modelFilename = new File(
             System.getProperty("user.dir"),
             "generated-models/melanomaDetector_yolov2.zip");
@@ -149,10 +159,12 @@ public class MelanomaDetector {
             .fineTuneConfiguration(fineTuneConf)
             .removeVertexKeepConnections("conv2d_23")
             .removeVertexKeepConnections("outputs")
+            //The convolution layer just before 'outputs'
             .addLayer("conv2d_23",
                     new ConvolutionLayer.Builder(1, 1)
-                        .nIn(1024)
-                        .nOut(nBoxes * (5 + nClasses))
+                        .nIn(1024) //no. of input channels
+                        //Setting here determines the dimensions of the final output CNN
+                        .nOut(nBoxes * (6 + nClasses))
                         .stride(1, 1)
                         .convolutionMode(ConvolutionMode.Same)
                         .weightInit(WeightInit.XAVIER)

@@ -38,12 +38,13 @@ public class SkinDatasetIterator {
     private static FileSplit trainData, testData;
     private static final int nChannels = 3;
 
-    //For kernel
-    public static final int gridWidth = 8;
-    public static final int gridHeight = 8; //should match yolowidth and yoloheight?
+    //For kernel. This also sets shape of output CNN layer
+    //gridWidth/height and yoloWidth/height should be the same to give square sections
+    public static final int gridWidth = 4;
+    public static final int gridHeight = 4; //should divide yolowidth and yoloheight without remainder?
     //For input image to YOLO?? Does it resize?
-    public static final int yolowidth = 256; //next try: 416 400, 384 (384 is max width of training images)
-    public static final int yoloheight = 256;
+    public static final int yolowidth = 128; //next try: 416 400, 384 (384 is max width of training images)
+    public static final int yoloheight = 128;
 
 
     private static RecordReaderDataSetIterator makeIterator(InputSplit split,Path dir, int batchSize) throws Exception{
