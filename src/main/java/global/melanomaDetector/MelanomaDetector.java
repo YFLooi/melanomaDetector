@@ -37,6 +37,7 @@ import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.zoo.model.YOLO2;
+import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -59,7 +60,7 @@ public class MelanomaDetector {
     //***Set model parameters***
     private static final Logger log = LoggerFactory.getLogger(MelanomaDetector.class);
     private static int seed = 123;
-    private static double detectionThreshold = 0.3;
+    private static double detectionThreshold = 0.5;
     private static int nBoxes = 5; //refers to bounding boxes to generate at output layer
     private static double lambdaNoObj = 0.5;
     private static double lambdaCoord = 5.0;
@@ -68,7 +69,7 @@ public class MelanomaDetector {
 
     //***Set model run parameters***
     private static int batchSize = 10; //Smallest batch is lentigoNOS
-    private static int nEpochs = 10;
+    private static int nEpochs = 2;
     private static double learningRate = 1e-4;
     //5 types of labelled training data supplied, hence 5 possible outputs:
     //lentigo NOS, lichenoid keratosis, melanoma, nevus, and seborrheic keratosis
@@ -86,10 +87,16 @@ public class MelanomaDetector {
 
     //***Set bounding boxes parameters***
     private static Frame frame = null;
+
     //Fix the colour map of the bounding boxes
+    //5 colours for 5 possible outputs. If not enough, can cause
+    //"ArrayIndexOutOfBoundsException: 2" during model validation
     private static final Scalar GREEN = RGB(0, 255.0, 0);
     private static final Scalar YELLOW = RGB(255, 255, 0);
-    private static Scalar[] colormap = {GREEN, YELLOW};
+    private static final Scalar BLUE = RGB(0, 0, 255);
+    private static final Scalar PURPLE = RGB(128, 128, 0);
+    private static final Scalar RED = RGB(255, 0, 0);
+    private static Scalar[] colormap = {GREEN, YELLOW, BLUE,PURPLE,RED};
     //Will later contain labels for bounding boxes
     private static String labeltext = null;
 
@@ -106,7 +113,6 @@ public class MelanomaDetector {
             Nd4j.getRandom().setSeed(seed);
             log.info("Load model...");
             model = ModelSerializer.restoreComputationGraph(modelFilename);
-
         } else {
             Nd4j.getRandom().setSeed(seed);
             INDArray priors = Nd4j.create(priorBoxes);
@@ -126,18 +132,19 @@ public class MelanomaDetector {
                     SkinDatasetIterator.yolowidth,
                     nClasses)));
 
-            //STEP 2.4: Training and Save model.
-            log.info("Train model...");
+            //STEP 2.4: Setup listeners, train and save model
             UIServer server = UIServer.getInstance();
             StatsStorage storage = new InMemoryStatsStorage();
             server.attach(storage);
-            model.setListeners(new ScoreIterationListener(1), new StatsListener(storage));
+            model.setListeners(new ScoreIterationListener(1), new StatsListener(storage, 10));
 
+            log.info("Train model...");
             for (int i = 1; i < nEpochs + 1; i++) {
                 trainIter.reset();
                 while (trainIter.hasNext()) {
                     model.fit(trainIter.next());
                 }
+
                 log.info("*** Completed epoch {} ***", i);
             }
             ModelSerializer.writeModel(model, modelFilename, true);
@@ -149,7 +156,8 @@ public class MelanomaDetector {
         OfflineValidationWithTestDataset(testIter);
 
         //STEP 4: Inference the model and process the webcam stream and make predictions.
-        //doInference();
+//        log.info("Starting webcam...");
+//        doInference();
     }
 
 
@@ -200,7 +208,9 @@ public class MelanomaDetector {
         NativeImageLoader imageLoader = new NativeImageLoader();
         CanvasFrame canvas = new CanvasFrame("Validate Test Dataset");
         OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
-        org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer yout = (org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer) model.getOutputLayer(0);
+        org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer yout =
+                (org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer)
+                model.getOutputLayer(0);
         Mat convertedMat = new Mat();
         Mat convertedMat_big = new Mat();
 
@@ -209,11 +219,15 @@ public class MelanomaDetector {
             INDArray features = ds.getFeatures();
             INDArray results = model.outputSingle(features);
             List<DetectedObject> objs = yout.getPredictedObjects(results, detectionThreshold);
+            //Applies intersection over union to avoid overlapping bounding boxes
             YoloUtils.nms(objs, 0.4);
             Mat mat = imageLoader.asMat(features);
             mat.convertTo(convertedMat, CV_8U, 255, 0);
+
+            //scales up image width and height
             int w = mat.cols() * 2;
             int h = mat.rows() * 2;
+
             resize(convertedMat, convertedMat_big, new Size(w, h));
             convertedMat_big = drawResults(objs, convertedMat_big, w, h);
             canvas.showImage(converter.convert(convertedMat_big));
@@ -221,10 +235,16 @@ public class MelanomaDetector {
         }
         canvas.dispose();
     }
+    //draws bounding boxes and their labels
     private static Mat drawResults(List<DetectedObject> objects, Mat mat, int w, int h) {
         for (DetectedObject obj : objects) {
             double[] xy1 = obj.getTopLeftXY();
             double[] xy2 = obj.getBottomRightXY();
+
+//            log.info("Image width: "+w+"& image height: "+h);
+//            log.info("topLeft coords: "+xy1[0]+", "+xy1[1]);
+//            log.info("bottomLeft coords: "+xy2[0]+", "+xy2[1]);
+
             String label = labels.get(obj.getPredictedClass());
             int x1 = (int) Math.round(w * xy1[0] / SkinDatasetIterator.gridWidth);
             int y1 = (int) Math.round(h * xy1[1] / SkinDatasetIterator.gridHeight);
@@ -236,105 +256,116 @@ public class MelanomaDetector {
             labeltext = label + " " + String.format("%.2f", obj.getConfidence() * 100) + "%";
             int[] baseline = {0};
             Size textSize = getTextSize(labeltext, FONT_HERSHEY_DUPLEX, 1, 1, baseline);
-            rectangle(mat, new Point(x1 + 2, y2 - 2), new Point(x1 + 2 + textSize.get(0), y2 - 2 - textSize.get(1)), colormap[obj.getPredictedClass()], FILLED, 0, 0);
-            putText(mat, labeltext, new Point(x1 + 2, y2 - 2), FONT_HERSHEY_DUPLEX, 1, RGB(0, 0, 0));
+            //Sets position of bounding box
+            rectangle(mat, new Point(x1 + 2, y2 - 2),
+                    new Point(x1 + 2 + textSize.get(0),
+                    y2 - 2 - textSize.get(1)), colormap[obj.getPredictedClass()],
+                    FILLED, 0, 0);
+            //Sets position of caption box
+            putText(mat, labeltext, new Point(x1 - 2, y2 - 2),
+                    FONT_HERSHEY_DUPLEX, 0.5, RGB(0, 0, 0));
         }
         return mat;
     }
 
 
-    // Stream video frames from Webcam and run them through YOLOv2 model and get predictions
-//    private static void doInference() {
-//
-//        String cameraPos = "front";
-//        int cameraNum = 0;
-//        Thread thread = null;
-//        NativeImageLoader loader = new NativeImageLoader(
-//                SkinDatasetIterator.yolowidth,
-//                SkinDatasetIterator.yoloheight,
-//                3,
-//                new ColorConversionTransform(COLOR_BGR2RGB));
-//        ImagePreProcessingScaler scaler = new ImagePreProcessingScaler(0, 1);
-//
-//        if (!cameraPos.equals("front") && !cameraPos.equals("back")) {
-//            try {
-//                throw new Exception("Unknown argument for camera position. Choose between front and back");
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//        }
-//
-//        FrameGrabber grabber = null;
-//        try {
-//            grabber = FrameGrabber.createDefault(cameraNum);
-//        } catch (FrameGrabber.Exception e) {
-//            e.printStackTrace();
-//        }
-//        OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
-//
-//        try {
-//            grabber.start();
-//        } catch (FrameGrabber.Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        CanvasFrame canvas = new CanvasFrame("Object Detection");
-//        int w = grabber.getImageWidth();
-//        int h = grabber.getImageHeight();
-//        canvas.setCanvasSize(w, h);
-//
-//        while (true) {
-//            try {
-//                frame = grabber.grab();
-//            } catch (FrameGrabber.Exception e) {
-//                e.printStackTrace();
-//            }
-//
-//            //if a thread is null, create new thread
-//            if (thread == null) {
-//                thread = new Thread(() ->
-//                {
-//                    while (frame != null) {
-//                        try {
-//                            Mat rawImage = new Mat();
-//
-//                            //Flip the camera if opening front camera
-//                            if (cameraPos.equals("front")) {
-//                                Mat inputImage = converter.convert(frame);
-//                                flip(inputImage, rawImage, 1);
-//                            } else {
-//                                rawImage = converter.convert(frame);
-//                            }
-//
-//                            Mat resizeImage = new Mat();
-//                            resize(rawImage, resizeImage, new Size(SkinDatasetIterator.yolowidth, SkinDatasetIterator.yoloheight));
-//                            INDArray inputImage = loader.asMatrix(resizeImage);
-//                            scaler.transform(inputImage);
-//                            INDArray outputs = model.outputSingle(inputImage);
-//                            org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer yout = (org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer) model.getOutputLayer(0);
-//                            List<DetectedObject> objs = yout.getPredictedObjects(outputs, detectionThreshold);
-//                            YoloUtils.nms(objs, 0.4);
-//                            rawImage = drawResults(objs, rawImage, w, h);
-//                            canvas.showImage(converter.convert(rawImage));
-//                        } catch (Exception e) {
-//                            throw new RuntimeException(e);
-//                        }
-//                    }
-//                });
-//                thread.start();
-//            }
-//
-//            KeyEvent t = null;
-//            try {
-//                t = canvas.waitKey(33);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//
-//            if ((t != null) && (t.getKeyCode() == KeyEvent.VK_Q)) {
-//                break;
-//            }
-//        }
-//    }
-//
+    //Stream video frames from Webcam and run them through YOLOv2 model and get predictions
+    private static void doInference() {
+        String cameraPos = "front";
+        int cameraNum = 0;
+        Thread thread = null;
+        NativeImageLoader loader = new NativeImageLoader(
+                SkinDatasetIterator.yolowidth,
+                SkinDatasetIterator.yoloheight,
+                3,
+                new ColorConversionTransform(COLOR_BGR2RGB));
+        ImagePreProcessingScaler scaler = new ImagePreProcessingScaler(0, 1);
+
+        if (!cameraPos.equals("front") && !cameraPos.equals("back")) {
+            try {
+                throw new Exception("Unknown argument for camera position. Choose between front and back");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        FrameGrabber grabber = null;
+        try {
+            grabber = FrameGrabber.createDefault(cameraNum);
+        } catch (FrameGrabber.Exception e) {
+            e.printStackTrace();
+        }
+        OpenCVFrameConverter.ToMat converter = new OpenCVFrameConverter.ToMat();
+
+        try {
+            grabber.start();
+        } catch (FrameGrabber.Exception e) {
+            e.printStackTrace();
+        }
+
+        CanvasFrame canvas = new CanvasFrame("Object Detection");
+        int w = grabber.getImageWidth();
+        int h = grabber.getImageHeight();
+        canvas.setCanvasSize(w, h);
+
+        while (true) {
+            try {
+                frame = grabber.grab();
+            } catch (FrameGrabber.Exception e) {
+                e.printStackTrace();
+            }
+
+            //if a thread is null, create new thread
+            if (thread == null) {
+                thread = new Thread(() ->
+                {
+                    while (frame != null) {
+                        try {
+                            Mat rawImage = new Mat();
+
+                            //Flip the camera if opening front camera
+                            if (cameraPos.equals("front")) {
+                                Mat inputImage = converter.convert(frame);
+                                flip(inputImage, rawImage, 1);
+                            } else {
+                                rawImage = converter.convert(frame);
+                            }
+
+                            //Resizes and transforms input image from webcam
+                            Mat resizeImage = new Mat();
+                            resize(rawImage, resizeImage, new Size(SkinDatasetIterator.yolowidth, SkinDatasetIterator.yoloheight));
+                            INDArray inputImage = loader.asMatrix(resizeImage);
+                            scaler.transform(inputImage);
+
+                            //Runs input image through model, outputs a single image
+                            INDArray outputs = model.outputSingle(inputImage);
+                            org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer yout =
+                                    (org.deeplearning4j.nn.layers.objdetect.Yolo2OutputLayer)
+                                            model.getOutputLayer(0);
+                            List<DetectedObject> objs = yout.getPredictedObjects(outputs, detectionThreshold);
+                            //applies nms over detected images
+                            YoloUtils.nms(objs, 0.4);
+                            //Draws bounding boxes
+                            rawImage = drawResults(objs, rawImage, w, h);
+                            canvas.showImage(converter.convert(rawImage));
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
+                thread.start();
+            }
+
+            KeyEvent t = null;
+            try {
+                t = canvas.waitKey(33);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if ((t != null) && (t.getKeyCode() == KeyEvent.VK_Q)) {
+                break;
+            }
+        }
+    }
 }
