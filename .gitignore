@@ -1,5 +1,6 @@
 target
 ideatarget
+generated-models
 .target
 .cache
 .cache-main

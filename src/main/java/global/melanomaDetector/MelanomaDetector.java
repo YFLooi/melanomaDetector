@@ -60,8 +60,7 @@ public class MelanomaDetector {
     private static final Logger log = LoggerFactory.getLogger(MelanomaDetector.class);
     private static int seed = 123;
     private static double detectionThreshold = 0.3;
-    //Set so that nBoxes*(5+nClasses) = odd number
-    private static int nBoxes = 5; //refers to bounding boxes to generate at output layer??
+    private static int nBoxes = 5; //refers to bounding boxes to generate at output layer
     private static double lambdaNoObj = 0.5;
     private static double lambdaCoord = 5.0;
     //Sets aspect ratio of bounding boxes drawn at YOLO ouptut layer
@@ -69,7 +68,7 @@ public class MelanomaDetector {
 
     //***Set model run parameters***
     private static int batchSize = 10; //Smallest batch is lentigoNOS
-    private static int nEpochs = 2;
+    private static int nEpochs = 10;
     private static double learningRate = 1e-4;
     //5 types of labelled training data supplied, hence 5 possible outputs:
     //lentigo NOS, lichenoid keratosis, melanoma, nevus, and seborrheic keratosis
@@ -142,10 +141,11 @@ public class MelanomaDetector {
                 log.info("*** Completed epoch {} ***", i);
             }
             ModelSerializer.writeModel(model, modelFilename, true);
-            System.out.println("Model saved.");
+            log.info("Model saved.");
         }
 
         //STEP 3: Evaluate the model's accuracy by using the test iterator.
+        log.info("Validating model...");
         OfflineValidationWithTestDataset(testIter);
 
         //STEP 4: Inference the model and process the webcam stream and make predictions.
