@@ -6,11 +6,9 @@ import org.datavec.api.split.InputSplit;
 import org.datavec.image.loader.NativeImageLoader;
 import org.datavec.image.recordreader.objdetect.ObjectDetectionRecordReader;
 import org.datavec.image.recordreader.objdetect.impl.VocLabelProvider;
-import org.datavec.image.transform.BoxImageTransform;
 import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
-import org.nd4j.linalg.dataset.api.DataSetPreProcessor;
-import org.nd4j.linalg.dataset.api.preprocessor.CropAndResizeDataSetPreProcessor;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
+import org.nd4j.shade.protobuf.compiler.PluginProtos;
 import org.slf4j.Logger;
 
 import java.io.File;
@@ -30,7 +28,9 @@ public class SkinDatasetIterator {
     private static Path trainDir, testDir;
     //Define name of folders containing train and test data
     public static String trainfolder ="train";
-    public static String testfolder ="test";
+//    public static String testfolder ="test";
+    public static String testfolder ="validation";
+
 
     //Random number to initialise FileSplit when it works on trainData and testData
     private static final int seed = 123;
@@ -40,12 +40,11 @@ public class SkinDatasetIterator {
 
     //For kernel. This also sets shape of output CNN layer
     //gridWidth/height and yoloWidth/height should be the same to give square sections
-    public static final int gridWidth = 8;
-    public static final int gridHeight = 8; //should divide yolowidth and yoloheight without remainder?
-    //For input image to YOLO, which also becomes output img. Does it resize?
-    public static final int yolowidth = 256; //next try: 416 400, 384 (384 is max width of training images)
-    public static final int yoloheight = 256;
-
+    public static final int gridWidth = 4;
+    public static final int gridHeight = 4; //should divide yolowidth and yoloheight without remainder?
+    //For input image to YOLO?? Does it resize?
+    public static final int yolowidth = 128; //next try: 416 400, 384 (384 is max width of training images)
+    public static final int yoloheight = 128;
 
     private static RecordReaderDataSetIterator makeIterator(InputSplit split,Path dir, int batchSize) throws Exception{
         //VOCLabelProvider reads PascalVOC xml label files.
@@ -76,8 +75,9 @@ public class SkinDatasetIterator {
         loadData();
         trainDir=Paths.get(parentDir,trainfolder);
         testDir=Paths.get(parentDir,testfolder);
-        log.info("trainingData folder located at: "+trainDir);
-        log.info("testData folder located at: "+testDir);
+
+        log.info("Path to train images: "+trainDir);
+        log.info("Path to test images: "+testDir);
 
         trainData = new FileSplit(new File(trainDir.toString()), NativeImageLoader.ALLOWED_FORMATS, rng);
         testData = new FileSplit(new File(testDir.toString()),NativeImageLoader.ALLOWED_FORMATS,rng);
@@ -85,11 +85,10 @@ public class SkinDatasetIterator {
     private static void loadData() throws IOException{
         //dataDir creates a path of "C:\Users\win10AccountName\.deeplearning4j\data"
         dataDir= Paths.get(
-                    System.getProperty("user.home"),
-                    GetPropValuesHelper.getPropValues("dl4j_home.data")
-                ).toString();
+                System.getProperty("user.home"),
+                GetPropValuesHelper.getPropValues("dl4j_home.data")
+        ).toString();
         parentDir = Paths.get(dataDir,"melanomaChallenge","dataset").toString();
         log.info("Folders containing train and test data located \nat: "+parentDir);
     }
 }
-
