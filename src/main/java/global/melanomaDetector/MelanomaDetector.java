@@ -59,7 +59,7 @@ public class MelanomaDetector {
   private static double lambdaNoObj = 0.5;
   private static double lambdaCoord = 5.0;
   //Sets aspect ratio of bounding boxes drawn at YOLO ouptut layer
-  private static double[][] priorBoxes = {{1, 3}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
+  private static double[][] priorBoxes = {{1, 4}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
 
   //***Set model run parameters***
   private static int batchSize = 10; //Smallest batch is lentigoNOS
