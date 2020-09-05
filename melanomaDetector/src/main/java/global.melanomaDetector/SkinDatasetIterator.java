@@ -10,6 +10,7 @@ import org.deeplearning4j.datasets.datavec.RecordReaderDataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
 import org.nd4j.shade.protobuf.compiler.PluginProtos;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +19,7 @@ import java.nio.file.Paths;
 import java.util.Random;
 
 public class SkinDatasetIterator {
-    private static final Logger log = org.slf4j.LoggerFactory.getLogger(SkinDatasetIterator .class);
+    private static final Logger log = LoggerFactory.getLogger(SkinDatasetIterator.class);
 
     //dataDir is path to folder containing dl4j datasets on local machine
     //parentDir is path to folder containing train and test data sets

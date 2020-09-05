@@ -31,7 +31,6 @@ import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
 import org.deeplearning4j.zoo.model.YOLO2;
-import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
 import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -56,15 +55,15 @@ public class MelanomaDetector {
   private static int seed = 123;
   private static double detectionThreshold = 0.5;
   //Set so that nBoxes*(5+nClasses) = odd number
-  private static int nBoxes = 5; //refers to anchor boxes to generate at output layer??
+  private static int nBoxes = 5; //refers to bounding boxes to generate at output layer??
   private static double lambdaNoObj = 0.5;
   private static double lambdaCoord = 5.0;
-  //Sets aspect ratio of anchor boxes
+  //Sets aspect ratio of bounding boxes drawn at YOLO ouptut layer
   private static double[][] priorBoxes = {{1, 3}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
 
   //***Set model run parameters***
   private static int batchSize = 10; //Smallest batch is lentigoNOS
-  private static int nEpochs = 20;
+  private static int nEpochs = 10;
   private static double learningRate = 1e-4;
   //5 types of labelled training data supplied, hence 5 possible outputs:
   //lentigo NOS, lichenoid keratosis, melanoma, nevus, and seborrheic keratosis
@@ -88,12 +87,12 @@ public class MelanomaDetector {
   private static final Scalar GREEN = RGB(0, 255.0, 0);
   private static final Scalar YELLOW = RGB(255, 255, 0);
   private static final Scalar BLUE = RGB(24, 67, 166);
-
+//  private static final Scalar ORANGE = RGB(229, 144, 32);
+//  private static final Scalar PINK = RGB(206, 60, 143);
 
   private static Scalar[] colormap = {GREEN, YELLOW,BLUE};
   //Will later contain labels for bounding boxes
   private static String labeltext = null;
-
 
 
   public static void main(String[] args) throws Exception{
@@ -102,15 +101,13 @@ public class MelanomaDetector {
     RecordReaderDataSetIterator testIter = SkinDatasetIterator.testIterator(1);
     labels = trainIter.getLabels();
 
-
     //If model does not exist, train the model, else directly go to model evaluation and then run real time object detection inference.
       //modelFilename.exists()
-      if (modelFilename.exists()) {
+      if (trigger==true) {
       //STEP 2 : Load trained model from previous execution
       Nd4j.getRandom().setSeed(seed);
       log.info("Load model...");
       model = ModelSerializer.restoreComputationGraph(modelFilename);
-
 
     } else {
       Nd4j.getRandom().setSeed(seed);
@@ -208,14 +205,10 @@ public class MelanomaDetector {
     Mat convertedMat = new Mat();
     Mat convertedMat_big = new Mat();
 
-
-
     while (test.hasNext() && canvas.isVisible()) {
       org.nd4j.linalg.dataset.DataSet ds = test.next();
-      // get the prediction
       INDArray features = ds.getFeatures();
       INDArray results = model.outputSingle(features);
-      //non-maximum suppression (NMS)
       List<DetectedObject> objs = yout.getPredictedObjects(results, detectionThreshold);
       YoloUtils.nms(objs, 0.5);
       Mat mat = imageLoader.asMat(features);
@@ -226,14 +219,8 @@ public class MelanomaDetector {
       convertedMat_big = drawResults(objs, convertedMat_big, w, h);
       canvas.showImage(converter.convert(convertedMat_big));
       canvas.waitKey();
-
-
-
-
     }
     canvas.dispose();
-
-
   }
   private static Mat drawResults(List<DetectedObject> objects, Mat mat, int w, int h) {
     for (DetectedObject obj : objects) {

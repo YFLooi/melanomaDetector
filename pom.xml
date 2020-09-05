@@ -3,6 +3,7 @@
 <!--
   ~ /*
   ~  * ******************************************************************************
+  ~  *  * Copyright (c) 2019 Skymind AI Bhd.
   ~  *  * Copyright (c) 2020 CertifAI Sdn. Bhd.
   ~  *  *
   ~  *  * This program and the accompanying materials are made available under the
@@ -20,213 +21,198 @@
   ~  */
   ~
   -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+    <groupId>global.skymind</groupId>
+    <artifactId>traininglabs</artifactId>
+    <packaging>pom</packaging>
+    <!-- modelVersion and artifactId must be set to allow correct packages to be downloaded -->
+    <modelVersion>4.0.0</modelVersion>
+    <version>1.0.0-alpha</version>
 
-  <groupId>melanoma-detector</groupId>
-  <artifactId>global.skymind</artifactId>
-  <version>1.0-SNAPSHOT</version>
+    <!-- Change freely to describe repo -->
+    <name>Melanoma-Detector</name>
+    <description>Repo: https://github.com/YFLooi/melanomaDetector</description>
 
-  <name>Melanoma Detector</name>
-  <description>Find melanomas based on images</description>
+    <properties>
+        <!-- Change the nd4j.backend property to nd4j-cuda-*.*-platform example: nd4j-cuda-10.2-platform to use CUDA GPUs -->
+        <!-- For CPU, change the nd4j.backend property to nd4j-native-platform -->
+        <!-- For CPU with AVX change the nd4j.backend property to nd4j-native -->
+        <nd4j.backend>nd4j-native</nd4j.backend>
+        <!-- Change the dl4j.cuda.backend property to deeplearning4j-cuda-*.*-platform example: deeplearning4j-cuda-10.0 to use CuDNN -->
+        <dl4j.cuda.backend>deeplearning4j-cuda-10.2</dl4j.cuda.backend>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <shadedClassifier>bin</shadedClassifier>
 
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <java.version>1.8</java.version>
-    <dl4j.version>1.0.0-beta6</dl4j.version>
-    <nd4j.version>1.0.0-beta6</nd4j.version>
+        <java.version>1.8</java.version>
+        <nd4j.version>1.0.0-beta6</nd4j.version>
+        <dl4j.version>1.0.0-beta6</dl4j.version>
+        <datavec.version>1.0.0-beta6</datavec.version>
 
-    <!-- Change the nd4j.backend property to nd4j-cuda-*.*-platform example: nd4j-cuda-10.2-platform to use CUDA v10.2 with nVidia GPUs -->
-    <!-- For CPU, change the nd4j.backend property to nd4j-native-platform -->
-    <!-- For CPU with AVX change the nd4j.backend property to nd4j-native -->
-    <!-- CUDA error with this repo:
-    Exception in thread "main" java.lang.RuntimeException: Can't allocate [HOST] memory: 407703112; threadId: 1 -->
-    <nd4j.backend>nd4j-native</nd4j.backend>
+        <javacv.version>1.5.2</javacv.version>
+        <zip4j.version>2.2.6</zip4j.version>
+        <slf4j.version>2.0.0-alpha1</slf4j.version>
+        <httpclient.version>4.5.12</httpclient.version>
 
-    <datavec.version>1.0.0-beta6</datavec.version>
-    <dl4j.cuda.backend>deeplearning4j-cuda-10.2</dl4j.cuda.backend>
+        <maven-compiler-plugin.version>3.6.1</maven-compiler-plugin.version>
+        <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
+        <exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
+        <maven.minimum.version>3.3.1</maven.minimum.version>
+        <javafx.version>2.2.3</javafx.version>
 
-    <slf4j.version>2.0.0-alpha1</slf4j.version>
-    <javacv.version>1.5.2</javacv.version>
-    <zip4j.version>2.2.6</zip4j.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
 
-    <maven-compiler-plugin.version>3.6.1</maven-compiler-plugin.version>
-    <maven-shade-plugin.version>2.4.3</maven-shade-plugin.version>
-    <exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
-    <maven.minimum.version>3.3.1</maven.minimum.version>
-    <javafx.version>2.2.3</javafx.version>
-    <dl4j.cuda.backend>deeplearning4j-cuda-10.2</dl4j.cuda.backend>
-  </properties>
+    <!-- Refers to the subfolders of this repo with their own pom.xml
+         Weird, why does it leave out dl4j-spark-labs -->
+    <modules>
+        <module>melanomaDetector</module>
+    </modules>
 
-  <dependencies>
-    <!-- ND4J backend. You need one in every DL4J project.
-    Normally define artifactId as either "nd4j-native-platform" or "nd4j-cuda-9.2-platform" -->
-    <dependency>
-      <groupId>org.nd4j</groupId>
-      <artifactId>${nd4j.backend}</artifactId>
-      <version>${nd4j.version}</version>
-    </dependency>
-
-    <!--Comment out to disable AVX-->
-    <dependency>
-      <groupId>org.nd4j</groupId>
-      <artifactId>${nd4j.backend}</artifactId>
-      <version>${nd4j.version}</version>
-      <classifier>windows-x86_64-avx2</classifier>
-    </dependency>
-
-
-    <!-- Altenatively, use GPU /CUDA for training -->
-    <!-- To use this, set ${nd4j.backend} = deeplearning4j-cuda-10.2 -->
-    <!-- Code below enables cuDNN to work with CUDA when training using gpu
-    <dependency>
-      <groupId>org.deeplearning4j</groupId>
-      <artifactId>${dl4j.cuda.backend}</artifactId>
-      <version>${dl4j.version}</version>
-    </dependency>
-    -->
-
-    <!-- deeplearning4j-core: contains main functionality and neural networks -->
-    <dependency>
-      <groupId>org.deeplearning4j</groupId>
-      <artifactId>deeplearning4j-core</artifactId>
-      <version>${dl4j.version}</version>
-    </dependency>
-
-    <!-- https://mvnrepository.com/artifact/org.deeplearning4j/deeplearning4j-nn -->
-    <dependency>
-      <groupId>org.deeplearning4j</groupId>
-      <artifactId>deeplearning4j-nn</artifactId>
-      <version>${dl4j.version}</version>
-    </dependency>
-
-    <!-- deeplearning4j-ui is used for visualization: see http://deeplearning4j.org/visualization -->
-    <dependency>
-      <groupId>org.deeplearning4j</groupId>
-      <artifactId>deeplearning4j-ui</artifactId>
-      <version>${dl4j.version}</version>
-    </dependency>
-
-    <!-- Next 2: used for MapFileConversion Example. Note you need *both* together -->
-    <dependency>
-      <groupId>org.datavec</groupId>
-      <artifactId>datavec-local</artifactId>
-      <version>${datavec.version}</version>
-    </dependency>
-
-    <!--For openCV-->
-    <dependency>
-      <groupId>org.bytedeco</groupId>
-      <!--May need to change to javacv-platform if error-->
-      <!--If changed to javacv-platform, ,ust use with classpath file command line shortener.
-      Go to Run > Edit config > videoObjectDetection > Shorten command line.
-      Set to classpathfile --> <!--original: javacv-->
-      <artifactId>javacv</artifactId>
-      <version>${javacv.version}</version>
-    </dependency>
-
-    <!--For YOLO model-->
-    <dependency>
-      <groupId>org.deeplearning4j</groupId>
-      <artifactId>deeplearning4j-zoo</artifactId>
-      <version>${dl4j.version}</version>
-    </dependency>
+    <!-- Maven Enforcer: Ensures user has an up to date version of Maven before building -->
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>1.0.1</version>
+                <executions>
+                    <execution>
+                        <id>enforce-default</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>[${maven.minimum.version},)</version>
+                                    <message>********** Minimum Maven Version is ${maven.minimum.version}. Please upgrade Maven before continuing (run "mvn --version" to check). **********</message>
+                                </requireMavenVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
 
-    <!--Used for Unzipping files in some of the examples-->
-    <dependency>
-      <groupId>net.lingala.zip4j</groupId>
-      <artifactId>zip4j</artifactId>
-      <version>${zip4j.version}</version>
-    </dependency>
+            <plugin>
+                <groupId>com.lewisd</groupId>
+                <artifactId>lint-maven-plugin</artifactId>
+                <version>0.0.11</version>
+                <configuration>
+                    <failOnViolation>true</failOnViolation>
+                    <onlyRunRules>
+                        <rule>DuplicateDep</rule>
+                        <rule>RedundantPluginVersion</rule>
+                        <!-- Rules incompatible with Java 9
+                        <rule>VersionProp</rule>
+                        <rule>DotVersionProperty</rule> -->
+                    </onlyRunRules>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>pom-lint</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
 
-    <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j.version}</version>
-    </dependency>
+        </plugins>
 
-    <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-log4j12 -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>${slf4j.version}</version>
-    </dependency>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>com.lewisd</groupId>
+                                        <artifactId>lint-maven-plugin</artifactId>
+                                        <versionRange>[0.0.11,)</versionRange>
+                                        <goals>
+                                            <goal>check</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore/>
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 
-    <dependency>
-      <groupId>com.github.davidmoten</groupId>
-      <artifactId>geo</artifactId>
-      <version>0.7.1</version>
-    </dependency>
-  </dependencies>
+    <profiles>
+        <profile>
+            <id>OpenJFX</id>
+            <activation>
+                <jdk>1.7</jdk>
+            </activation>
 
-  <build>
-    <plugins>
-      <!-- Maven compiler plugin: compile for Java 8 -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.5.1</version>
-        <configuration>
-          <source>${java.version}</source>
-          <target>${java.version}</target>
-        </configuration>
-      </plugin>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <version>1.0.1</version>
+                        <executions>
+                            <execution>
+                                <id>enforce-default</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <requireProperty>
+                                            <property>env.JAVAFX_HOME</property>
+                                            <message>You must set the environment variable JAVAFX_HOME to the installation directory of the JavaFX 2.0 SDK! (with Oracle JDK1.7, $JRE_HOME/lib/jfxrt.jar)</message>
+                                        </requireProperty>
 
+                                    </rules>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
 
-      <!--
-      Maven shade plugin configuration:
-      To build uber jar (with all the dependencies)
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-install-plugin</artifactId>
+                        <version>2.5.2</version>
+                        <executions>
+                            <execution>
+                                <id>install-external</id>
+                                <phase>clean</phase>
+                                <configuration>
+                                    <file>${javafx.runtime.lib.jar}</file>
+                                    <repositoryLayout>default</repositoryLayout>
+                                    <groupId>com.oracle</groupId>
+                                    <artifactId>javafx</artifactId>
+                                    <version>${javafx.version}</version>
+                                    <packaging>jar</packaging>
+                                    <generatePom>true</generatePom>
+                                </configuration>
+                                <goals>
+                                    <goal>install-file</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
-      Example way of doing in command line:
-      mvn clean package
-      cd target
-      java -cp my-first-dl4j-project.jar global.global.skymind.solution.convolution.mnist.MnistClassifier
-      -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>${maven-shade-plugin.version}</version>
-        <configuration>
-          <shadedArtifactAttached>true</shadedArtifactAttached>
-          <shadedClassifierName>bin</shadedClassifierName>
-          <createDependencyReducedPom>true</createDependencyReducedPom>
-          <filters>
-            <filter>
-              <artifact>*:*</artifact>
-              <excludes>
-                <exclude>org/datanucleus/**</exclude>
-                <exclude>META-INF/*.SF</exclude>
-                <exclude>META-INF/*.DSA</exclude>
-                <exclude>META-INF/*.RSA</exclude>
-              </excludes>
-            </filter>
-          </filters>
-        </configuration>
-
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-            <configuration>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-                  <resource>reference.conf</resource>
-                </transformer>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                </transformer>
-              </transformers>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>

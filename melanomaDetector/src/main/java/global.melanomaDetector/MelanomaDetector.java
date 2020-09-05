@@ -36,6 +36,7 @@ import org.nd4j.linalg.api.buffer.DataType;
 import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
 import org.nd4j.linalg.factory.Nd4j;
+import org.nd4j.linalg.function.Function;
 import org.nd4j.linalg.learning.config.Adam;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,11 +60,11 @@ public class MelanomaDetector {
   private static double lambdaNoObj = 0.5;
   private static double lambdaCoord = 5.0;
   //Sets aspect ratio of bounding boxes drawn at YOLO ouptut layer
-  private static double[][] priorBoxes = {{1, 4}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
+  private static double[][] priorBoxes = {{1, 3}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
 
   //***Set model run parameters***
   private static int batchSize = 10; //Smallest batch is lentigoNOS
-  private static int nEpochs = 10;
+  private static int nEpochs = 20;
   private static double learningRate = 1e-4;
   //5 types of labelled training data supplied, hence 5 possible outputs:
   //lentigo NOS, lichenoid keratosis, melanoma, nevus, and seborrheic keratosis
@@ -101,8 +102,7 @@ public class MelanomaDetector {
     labels = trainIter.getLabels();
 
     //If model does not exist, train the model, else directly go to model evaluation and then run real time object detection inference.
-      //modelFilename.exists()
-      if (modelFilename.exists()) {
+    if (modelFilename.exists()) {
       //STEP 2 : Load trained model from previous execution
       Nd4j.getRandom().setSeed(seed);
       log.info("Load model...");
@@ -128,12 +128,16 @@ public class MelanomaDetector {
               nClasses)));
 
       //STEP 2.4: Training and Save model.
-      log.info("Train model...");
       UIServer server = UIServer.getInstance();
-      StatsStorage storage = new InMemoryStatsStorage();
-      server.attach(storage);
-      model.setListeners(new ScoreIterationListener(1), new StatsListener(storage));
+      StatsStorage statsStorage = new InMemoryStatsStorage();
 
+      //StatsStorage statsStorage = new FileStatsStorage(new File(System.getProperty("java.io.tmpdir"), "ui-stats.dl4j"));
+      server.attach(statsStorage);
+      model.setListeners(
+              new StatsListener(statsStorage),
+              new ScoreIterationListener(5));
+
+      log.info("Train model...");
       for (int i = 1; i < nEpochs + 1; i++) {
         trainIter.reset();
         while (trainIter.hasNext()) {
