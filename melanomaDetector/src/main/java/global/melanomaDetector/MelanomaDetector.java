@@ -150,10 +150,10 @@ public class MelanomaDetector {
     }
 
     //STEP 3: Evaluate the model's accuracy by using the test iterator.
-    //OfflineValidationWithTestDataset(testIter);
+    OfflineValidationWithTestDataset(testIter);
 
     //STEP 4: Inference the model and process the webcam stream and make predictions.
-    doInference();
+    //doInference();
   }
 
 
