@@ -56,10 +56,10 @@ public class MelanomaDetector {
   private static int seed = 123;
   private static double detectionThreshold = 0.5;
   //Set so that nBoxes*(5+nClasses) = odd number
-  private static int nBoxes = 5; //refers to bounding boxes to generate at output layer??
+  private static int nBoxes = 5; //refers to number of priorBoxes to generate at output layer
   private static double lambdaNoObj = 0.5;
   private static double lambdaCoord = 5.0;
-  //Sets aspect ratio of bounding boxes drawn at YOLO ouptut layer
+  //Sets aspect ratio of bounding boxes drawn at YOLO output layer
   private static double[][] priorBoxes = {{1, 3}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
 
   //***Set model run parameters***
@@ -70,7 +70,7 @@ public class MelanomaDetector {
   //lentigo NOS, lichenoid keratosis, melanoma, nevus, and seborrheic keratosis
   //If this changes, adjust nOut of conv2d_23 at getComputationGraph()
   //This ensures output CNN array dimensions matches that of input at conv2d_1
-  private static int nClasses = 3;
+  private static int nClasses = 2;
   private static List<String> labels;
 
   //***Set modelFilename and variable for ComputationGraph***
