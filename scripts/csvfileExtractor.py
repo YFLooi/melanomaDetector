@@ -23,7 +23,7 @@ with open('C:\\Users\\deSni\\.deeplearning4j\\data\\melanomaChallenge\\train.csv
 
     classtype=[]
 
-# filtering base on csv file
+# filtering based on csv file
     for row in reader:
         if row['diagnosis'] =="melanoma":
             melanomaclass.append(row['image_name'])
