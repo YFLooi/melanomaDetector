@@ -33,6 +33,19 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+//DIRECTORY STRUCTURE:
+//Images in the dataset have to be organized in directories by class/label.
+//In this example there are images in two classes
+//Use this: directory structure.
+//                                    parentDir
+//                                  /    |     \
+//                                 /     |      \
+//                            labelA  labelB   labelXXX
+//
+//No need to specify the "train" and "test" directories. InputSplit will take care of it
+//Set your data up like this so that labels from each label/class live in their own directory
+//And these label/class directories live together in the parent directory
+
 public class SkinDatasetIterator {
     private static final Logger log = LoggerFactory.getLogger(SkinDatasetIterator.class);
 
