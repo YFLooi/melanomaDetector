@@ -76,7 +76,9 @@ public class MelanomaDetector {
     //***Set model run parameters***
     private static int batchSize = 8;
     private static int trainPercentage = 80;
-    private static int nEpochs = 10; //170 iterations per epoch
+    //108 iterations per epoch
+    //With current setting, 2 epochs gives best results. More epochs do nothing to improve loss
+    private static int nEpochs = 2;
     private static double learningRate = 1e-4;
 
     //2 possible outputs: melanoma and not_melanoma
@@ -118,13 +120,14 @@ public class MelanomaDetector {
             FineTuneConfiguration fineTuneConf = getFineTuneConfiguration();
 
             //STEP 2.3: Transfer Learning steps - Modify prebuilt model's architecture
-            model = getComputationGraph(vgg16, fineTuneConf);
-                System.out.println(model.summary(InputType.convolutional(
-                224,
-                224,
-            nClasses)));
-            log.info("Model setup:");
+            log.info("Original model setup:");
             log.info(vgg16.summary());
+
+            model = getComputationGraph(vgg16, fineTuneConf);
+                log.info("Modified model setup:");
+                log.info(model.summary(InputType.convolutional(
+                224, 224, nClasses)));
+
 
             //STEP 2.4: Training and Save model.
             UIServer server = UIServer.getInstance();
