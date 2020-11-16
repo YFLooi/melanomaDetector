@@ -22,9 +22,11 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.ConvolutionMode;
 import org.deeplearning4j.nn.conf.GradientNormalization;
 import org.deeplearning4j.nn.conf.WorkspaceMode;
+import org.deeplearning4j.nn.conf.distribution.NormalDistribution;
 import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.ConvolutionLayer;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
+import org.deeplearning4j.nn.conf.layers.OutputLayer;
 import org.deeplearning4j.nn.conf.layers.objdetect.Yolo2OutputLayer;
 import org.deeplearning4j.nn.graph.ComputationGraph;
 import org.deeplearning4j.nn.layers.objdetect.DetectedObject;
@@ -37,6 +39,8 @@ import org.deeplearning4j.ui.api.UIServer;
 import org.deeplearning4j.ui.stats.StatsListener;
 import org.deeplearning4j.ui.storage.InMemoryStatsStorage;
 import org.deeplearning4j.util.ModelSerializer;
+import org.deeplearning4j.zoo.ZooModel;
+import org.deeplearning4j.zoo.model.VGG16;
 import org.deeplearning4j.zoo.model.YOLO2;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.evaluation.classification.ROC;
@@ -49,6 +53,7 @@ import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
 import org.nd4j.linalg.factory.Nd4j;
 import org.nd4j.linalg.function.Function;
 import org.nd4j.linalg.learning.config.Adam;
+import org.nd4j.linalg.lossfunctions.LossFunctions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,16 +72,11 @@ public class MelanomaDetector {
     //***Set model parameters***
     private static final Logger log = LoggerFactory.getLogger(MelanomaDetector.class);
     private static int seed = 123;
-    private static double detectionThreshold = 0.5;
-    private static int nBoxes = 5; //refers to number of priorBoxes to generate at output layer
-    private static double lambdaNoObj = 0.5;
-    private static double lambdaCoord = 5.0;
-    //Sets aspect ratio of bounding boxes drawn at YOLO output layer
-    private static double[][] priorBoxes = {{1, 3}, {2.5, 6}, {3, 4}, {3.5, 8}, {4, 9}};
 
     //***Set model run parameters***
-    private static int batchSize = 10;
-    private static int nEpochs = 1;
+    private static int batchSize = 8;
+    private static int trainPercentage = 80;
+    private static int nEpochs = 10; //170 iterations per epoch
     private static double learningRate = 1e-4;
 
     //2 possible outputs: melanoma and not_melanoma
@@ -88,8 +88,8 @@ public class MelanomaDetector {
     //***Set modelFilename and variable for ComputationGraph***
     //Refers to C:\devBox\melanomaDetector\generated-models
     private static File modelFilename = new File(
-    System.getProperty("user.dir"),
-    "generated-models/melanomaDetector_yolov2.zip");
+        System.getProperty("user.dir"),
+        "generated-models/melanomaDetector_vgg2Class.zip");
     private static ComputationGraph model;
 
 
@@ -108,10 +108,13 @@ public class MelanomaDetector {
 
 
     public static void main(String[] args) throws Exception{
-        SkinDatasetIterator.setup();
-        RecordReaderDataSetIterator trainIter = SkinDatasetIterator.trainIterator(batchSize);
-        RecordReaderDataSetIterator testIter = SkinDatasetIterator.testIterator(1);
+        SkinDatasetIterator.setup(batchSize, trainPercentage);
+        DataSetIterator trainIter = SkinDatasetIterator.trainIterator();
+        DataSetIterator testIter = SkinDatasetIterator.testIterator();
         labels = trainIter.getLabels();
+
+        //Evaluation eval = model.evaluate(testIter);
+        Evaluation eval = new Evaluation();
 
         //If model does not exist, train the model, else directly go to model evaluation and then run real time object detection inference.
         if (modelFilename.exists()) {
@@ -121,24 +124,23 @@ public class MelanomaDetector {
             model = ModelSerializer.restoreComputationGraph(modelFilename);
         } else {
             Nd4j.getRandom().setSeed(seed);
-            INDArray priors = Nd4j.create(priorBoxes);
 
             //STEP 2 : Train the model using Transfer Learning
             //STEP 2.1: Transfer Learning steps - Load YOLOv2 prebuilt model.
-            log.info("Build model...");
-            ComputationGraph pretrained = (ComputationGraph)YOLO2.builder().build().initPretrained();
+            ZooModel zooModel = VGG16.builder().build();
+            ComputationGraph vgg16 = (ComputationGraph) zooModel.initPretrained();
 
             //STEP 2.2: Transfer Learning steps - Model Configurations.
             FineTuneConfiguration fineTuneConf = getFineTuneConfiguration();
 
             //STEP 2.3: Transfer Learning steps - Modify prebuilt model's architecture
-            model = getComputationGraph(pretrained, priors, fineTuneConf);
+            model = getComputationGraph(vgg16, fineTuneConf);
                 System.out.println(model.summary(InputType.convolutional(
-                256,
-                256,
+                224,
+                224,
             nClasses)));
-//            SkinDatasetIterator.yoloheight,
-//            SkinDatasetIterator.yolowidth,
+            log.info("Model setup:");
+            log.info(vgg16.summary());
 
             //STEP 2.4: Training and Save model.
             UIServer server = UIServer.getInstance();
@@ -147,14 +149,26 @@ public class MelanomaDetector {
             //StatsStorage statsStorage = new FileStatsStorage(new File(System.getProperty("java.io.tmpdir"), "ui-stats.dl4j"));
             server.attach(statsStorage);
             model.setListeners(
-            new StatsListener(statsStorage),
-            new ScoreIterationListener(5));
+                new StatsListener(statsStorage),
+                //Prints the message "Score at iteration x is xxx" every 2 iterations
+                new ScoreIterationListener(2)
+            );
 
             log.info("Train model...");
-            for (int i = 1; i < nEpochs + 1; i++) {
+            int iter = 0;
+            for (int i = 0; i < nEpochs; i++) {
                 trainIter.reset();
                 while (trainIter.hasNext()) {
                     model.fit(trainIter.next());
+
+                    //Does a test every even xth iter
+                    if (iter > 0 && iter % 51 == 0) {
+                        log.info("Evaluating model at iter "+iter +" ....");
+                        eval = model.evaluate(testIter);
+                        log.info(eval.stats());
+                        testIter.reset();
+                    }
+                    ++iter;
                 }
                 log.info("*** Completed epoch {} ***", i);
             }
@@ -164,9 +178,8 @@ public class MelanomaDetector {
         }
 
         //Calculates confusion matrix (evaluation) and ROC curve
-        //Evaluation eval = model.evaluate(testIter);
-        Evaluation eval = new Evaluation();
         ROC roc = new ROC(1);
+        log.info("Commencing ROC...");
         model.doEvaluation(testIter, eval, roc);
         double aucObtained = roc.calculateAUC();
 
@@ -176,6 +189,7 @@ public class MelanomaDetector {
         //Sets save directory for exported ROC chart
         File rocFilepath = new File(System.getProperty("user.dir"),"/ROC_Curves/rocCurve.html");
         EvaluationTools.exportRocChartsToHtmlFile(roc, rocFilepath);
+        log.info("ROC curve html file stored at"+rocFilepath);
 
         //STEP 3: Evaluate the model's accuracy by using the test iterator.
         //OfflineValidationWithTestDataset(testIter);
@@ -185,34 +199,19 @@ public class MelanomaDetector {
     }
 
 
-    private static ComputationGraph getComputationGraph(ComputationGraph pretrained, INDArray priors, FineTuneConfiguration fineTuneConf) {
+    private static ComputationGraph getComputationGraph(ComputationGraph pretrained, FineTuneConfiguration fineTuneConf) {
         return new TransferLearning.GraphBuilder(pretrained)
-        .fineTuneConfiguration(fineTuneConf)
-        .removeVertexKeepConnections("conv2d_23")
-        .removeVertexKeepConnections("outputs")
-
-        //The convolution layer just before 'outputs'
-        .addLayer("conv2d_23", new ConvolutionLayer.Builder(1, 1)
-            .nIn(1024) //no. of input channels
-            //Setting here determines the dimensions of the final output CNN
-            .nOut(nBoxes * (5 + nClasses))
-            .stride(1, 1)
-            .convolutionMode(ConvolutionMode.Same)
-            .weightInit(WeightInit.XAVIER)
-            .activation(Activation.IDENTITY)
-            .build(),
-        "leaky_re_lu_22")
-        .addLayer("fc1", new DenseLayer.Builder()
-            .nOut(500)
-            .build(),
-        "conv2d_23")
-        .addLayer("outputs", new Yolo2OutputLayer.Builder()
-            .lambdaNoObj(lambdaNoObj)
-            .lambdaCoord(lambdaCoord)
-            .boundingBoxPriors(priors.castTo(DataType.FLOAT))
-            .build(),
-            "conv2d_23")
-            .setOutputs("outputs")
+            .fineTuneConfiguration(fineTuneConf)
+            .removeVertexKeepConnections("predictions")
+            .addLayer("predictions",
+                //XENT loss function + Sigmoid activation @output layer for multi-label binary classifcation
+                //If num output lcasses >2, use MCXENT + Softmax instead
+                new OutputLayer.Builder(LossFunctions.LossFunction.MCXENT)
+                    .nIn(4096)
+                    .nOut(nClasses)
+                    .activation(Activation.SOFTMAX)
+                    .build(),
+                "fc2")
             .build();
     }
     private static FineTuneConfiguration getFineTuneConfiguration() {
@@ -223,7 +222,7 @@ public class MelanomaDetector {
         .gradientNormalizationThreshold(1.0)
         .updater(new Adam.Builder().learningRate(learningRate).build())
         .l2(0.00001)
-        .activation(Activation.IDENTITY)
+        .activation(Activation.RELU)
         .trainingWorkspaceMode(WorkspaceMode.ENABLED)
         .inferenceWorkspaceMode(WorkspaceMode.ENABLED)
         .build();
