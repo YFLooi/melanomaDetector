@@ -109,6 +109,7 @@ public class SkinDatasetIterator {
         FileSplit filesInDir = new FileSplit(parentFile, allowedExtensions, rng);
 
         //The balanced path filter gives you fine tune control of the min/max cases to load for each class
+        //It randomises the input paths, thus the images are not fed according to their sequence in the source folder
         BalancedPathFilter pathFilter = new BalancedPathFilter(rng, allowedExtensions, labelMaker);
         if (trainPercentage >= 100) {
             throw new IllegalArgumentException(
