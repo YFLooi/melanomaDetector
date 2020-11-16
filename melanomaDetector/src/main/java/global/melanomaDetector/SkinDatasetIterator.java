@@ -60,8 +60,12 @@ public class SkinDatasetIterator {
 
     //scale input to 0 - 1
     private static DataNormalization scaler = new ImagePreProcessingScaler(0, 1);
+    //Labels incoming images by name of containing folder.
+    //Ex: parentDir = data/train & subfolders containing images in parentDir are "melanoma" and "not_melanoma"
+    //Thus, all images are labelled as either "melanoma" and "not_melanoma"
+    private static ParentPathLabelGenerator labelMaker = new ParentPathLabelGenerator();
     private static ImageTransform transform;
-    private static FileSplit trainData,testData;
+    private static InputSplit trainData,testData;
 
 
     //setup() and loadData() prepare data to be loaded into the model
@@ -87,39 +91,39 @@ public class SkinDatasetIterator {
         log.info("Getting parent data drive...");
         loadData();
 
-        Path trainDataPath = Paths.get(parentDir,trainfolder);
-        Path testDataPath = Paths.get(parentDir,testfolder);
-        System.out.println("Location of training data: "+trainDataPath.toString());
-        System.out.println("Location of test data: "+testDataPath.toString());
-
-        trainData = new FileSplit(new File(trainDataPath.toString()));
-        testData = new FileSplit(new File(testDataPath.toString()));
+//        Path trainDataPath = Paths.get(parentDir,trainfolder);
+//        Path testDataPath = Paths.get(parentDir,testfolder);
+//        System.out.println("Location of training data: "+trainDataPath.toString());
+//        System.out.println("Location of test data: "+testDataPath.toString());
+//
+//        trainData = new FileSplit(new File(trainDataPath.toString()));
+//        testData = new FileSplit(new File(testDataPath.toString()));
 
 
         //The approach below hopes the model learns each image class (melanoma, not_melanoma) on its own.
         //It combines all images into 1 folder, splits into train & test, then iterates
         //Unfortunately, this does not work for our input images
-//        File parentFile = new File(parentDir);
+        File parentFile = new File(parentDir);
 
         //Files in directories under the parent dir that have "allowed extensions" split needs a random number generator for reproducibility when splitting the files into train and test
-//        FileSplit filesInDir = new FileSplit(parentFile, allowedExtensions, rng);
-//
-//        //The balanced path filter gives you fine tune control of the min/max cases to load for each class
-//        BalancedPathFilter pathFilter = new BalancedPathFilter(rng, allowedExtensions, labelMaker);
-//        if (trainPercentage >= 100) {
-//            throw new IllegalArgumentException(
-//                "Percentage of data set aside for training has to be less than 100%. " +
-//                "Test percentage = 100 - training percentage, has to be greater than 0");
-//        }
-//
-//        //Split the image files into train and test
-//        InputSplit[] filesInDirSplit = filesInDir.sample(pathFilter, trainPercentage, 100-trainPercentage);
-//        trainData = filesInDirSplit[0];
-//        testData = filesInDirSplit[1];
+        FileSplit filesInDir = new FileSplit(parentFile, allowedExtensions, rng);
+
+        //The balanced path filter gives you fine tune control of the min/max cases to load for each class
+        BalancedPathFilter pathFilter = new BalancedPathFilter(rng, allowedExtensions, labelMaker);
+        if (trainPercentage >= 100) {
+            throw new IllegalArgumentException(
+                "Percentage of data set aside for training has to be less than 100%.\n" +
+                "Test percentage = 100 - training percentage, has to be greater than 0");
+        }
+
+        //Split the image files into train and test
+        InputSplit[] filesInDirSplit = filesInDir.sample(pathFilter, trainPercentage, 100-trainPercentage);
+        trainData = filesInDirSplit[0];
+        testData = filesInDirSplit[1];
     }
 
 
-    private static DataSetIterator makeIterator(FileSplit split, boolean training) throws IOException{
+    private static DataSetIterator makeIterator(InputSplit split, boolean training) throws IOException{
         //Force-crops input images to same size of 256*256px
         ImageTransform resizeImage = new ResizeImageTransform(224, 224);
         //Lists ImageTransform to be applied and a Double to specify odds that the ImageTransform will be applied
@@ -128,10 +132,6 @@ public class SkinDatasetIterator {
         );
         transform = new PipelineImageTransform(transformPipeline, false);
 
-        //Labels incoming images by name of containing folder.
-        //Ex: parentDir = data/train & subfolders containing images in parentDir are "melanoma" and "not_melanoma"
-        //Thus, all images are labelled as either "melanoma" and "not_melanoma"
-        ParentPathLabelGenerator labelMaker = new ParentPathLabelGenerator();
         //Cannot be used for supervised learning since it won't accept either PascalVOC or YOLO labels
         //This can only work with unsupervised(partially supervised?) learning, since it makes labels based on paths
         ImageRecordReader recordReader = new ImageRecordReader(
